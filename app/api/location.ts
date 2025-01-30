@@ -22,7 +22,8 @@ export default async function handler(
 			lat: parseFloat(data[0].lat),
 			lon: parseFloat(data[0].lon),
 		})
-	} catch {
+	} catch (error) {
+		console.log("Failed to get location because of error: ", error)
 		res.status(500).json({ error: "Failed to get location" })
 	}
 }
