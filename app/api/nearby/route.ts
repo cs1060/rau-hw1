@@ -2,17 +2,19 @@ import axios from "axios"
 import { NextResponse } from "next/server"
 
 const HEADERS = { "User-Agent": "LandmarkFinder/1.0" }
+const processedLandmarks = new Set<string>()
 
 async function getWikiDetails(title: string) {
 	try {
 		const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${title}`
 		const { data } = await axios.get(url, { headers: HEADERS })
-		return {
+		const details = {
 			url: data.content_urls?.desktop?.page || "",
 			image: data.thumbnail?.source || "",
 			extract: data.extract || "",
 		}
-	} catch {
+		return details
+	} catch (error) {
 		return { url: "", image: "", extract: "" }
 	}
 }
@@ -20,17 +22,21 @@ async function getWikiDetails(title: string) {
 async function getLandmarksNearby(lat: number, lon: number, type?: string) {
 	try {
 		const radius = 10000
-		const limit = 20
+		const limit = 50
 		let url = `https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord=${lat}|${lon}&gsradius=${radius}&gslimit=${limit}&format=json&gsprop=type`
 
-		// if (type) {
-		// 	url += `&gsprimary=${type}`
-		// }
+		const { data } = await axios.get(url, { headers: HEADERS })
 
+		let landmarks = data.query.geosearch
 		console.log("url", url)
 
-		const { data } = await axios.get(url, { headers: HEADERS })
-		return data.query.geosearch
+		if (type && type !== "all") {
+			landmarks = landmarks.filter(
+				(landmark: any) => landmark.type === type
+			)
+		}
+
+		return landmarks
 	} catch (error) {
 		console.error("Error fetching landmarks:", error)
 		return []
@@ -57,13 +63,20 @@ export async function GET(request: Request) {
 	)
 	const landmarksWithDetails = await Promise.all(
 		landmarks.map(async (landmark: any) => {
-			const details = await getWikiDetails(landmark.title)
+			const details = await getWikiDetails(
+				landmark.title.replace(/\s+/g, "_")
+			)
 			if (!details.url) return null
+			if (processedLandmarks.has(`${landmark.lat},${landmark.lon}`))
+				return null
+
+			const key = `${landmark.lat},${landmark.lon}`
+			processedLandmarks.add(key)
 
 			return {
 				lat: landmark.lat,
 				lon: landmark.lon,
-				type: landmark.type,
+				type: landmark.type === null ? "all" : landmark.type,
 				popup: `
                 <div style="width:300px">
                     <h4>${landmark.title}</h4>

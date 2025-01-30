@@ -13,10 +13,26 @@ L.Icon.Default.mergeOptions({
 		"https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 })
 
-const LOCATION_TYPES = [
-	{ value: "all", label: "All" },
-	{ value: "primary", label: "Primary Locations" },
-	{ value: "secondary", label: "Secondary Locations" },
+const WIKI_TYPES = [
+	{ value: "all", label: "All Types", emoji: "📍" },
+	{ value: "country", label: "Countries", emoji: "🏳️" },
+	{ value: "satellite", label: "Satellites", emoji: "🛰️" },
+	{ value: "adm1st", label: "States/Provinces", emoji: "🏛️" },
+	{ value: "adm2nd", label: "Counties", emoji: "🏢" },
+	{ value: "adm3rd", label: "Districts", emoji: "🏘️" },
+	{ value: "city", label: "Cities", emoji: "🌆" },
+	{ value: "airport", label: "Airports", emoji: "✈️" },
+	{ value: "mountain", label: "Mountains", emoji: "🗻" },
+	{ value: "isle", label: "Islands", emoji: "🏝️" },
+	{ value: "waterbody", label: "Water Bodies", emoji: "💧" },
+	{ value: "forest", label: "Forests", emoji: "🌲" },
+	{ value: "river", label: "Rivers", emoji: "🌊" },
+	{ value: "glacier", label: "Glaciers", emoji: "🧊" },
+	{ value: "event", label: "Events", emoji: "📅" },
+	{ value: "edu", label: "Education", emoji: "🎓" },
+	{ value: "pass", label: "Mountain Passes", emoji: "🚶" },
+	{ value: "railwaystation", label: "Railway Stations", emoji: "🚉" },
+	{ value: "landmark", label: "Landmarks", emoji: "🏛️" },
 ]
 
 const DEFAULT_CENTER: [number, number] = [51.505, -0.09]
@@ -31,8 +47,8 @@ export default function Map({ searchCenter }: Props) {
 	const markersRef = useRef<L.Marker[]>([])
 	const userMarkerRef = useRef<L.Marker | null>(null)
 	const timeoutRef = useRef<NodeJS.Timeout>(null)
-	const [locationType, setLocationType] = useState("all")
 	const [center, setCenter] = useState<[number, number]>(DEFAULT_CENTER)
+	const [wikiType, setWikiType] = useState("all")
 
 	useEffect(() => {
 		if (searchCenter) {
@@ -61,14 +77,22 @@ export default function Map({ searchCenter }: Props) {
 
 		const center = mapRef.current.getCenter()
 		const response = await fetch(
-			`/api/nearby?lat=${center.lat}&lon=${center.lng}${
-				locationType !== "all" ? `&type=${locationType}` : ""
-			}`
+			`/api/nearby?lat=${center.lat}&lon=${center.lng}&type=${wikiType}`
 		)
 		const landmarks = await response.json()
 
 		landmarks.forEach((landmark: any) => {
-			const marker = L.marker([landmark.lat, landmark.lon])
+			const emoji =
+				WIKI_TYPES.find((t) => t.value === landmark.type)?.emoji || "��"
+			const marker =
+				landmark.type !== "all"
+					? L.marker([landmark.lat, landmark.lon], {
+							icon: L.divIcon({
+								html: `<div style="background: white; border-radius: 50%; padding: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;"><span style="font-size: 20px">${emoji}</span></div>`,
+								className: "emoji-marker",
+							}),
+					  })
+					: L.marker([landmark.lat, landmark.lon])
 			const popup = L.popup({
 				closeButton: true,
 				autoPan: true,
@@ -82,14 +106,14 @@ export default function Map({ searchCenter }: Props) {
 			marker.addTo(mapRef.current!)
 			markersRef.current.push(marker)
 		})
-	}, [locationType])
+	}, [wikiType])
 
 	useEffect(() => {
 		if (typeof window === "undefined") return
 
 		const setupMap = () => {
 			if (!mapRef.current && containerRef.current) {
-				mapRef.current = L.map(containerRef.current).setView(center, 13)
+				mapRef.current = L.map(containerRef.current).setView(center, 15)
 
 				const streetLayer = L.tileLayer(
 					"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -138,7 +162,6 @@ export default function Map({ searchCenter }: Props) {
 		})
 			.addTo(map)
 			.bindPopup("Your Location")
-			.openPopup()
 
 		handleSearch()
 
@@ -157,14 +180,17 @@ export default function Map({ searchCenter }: Props) {
 	return (
 		<div className="relative h-full w-full">
 			<div ref={containerRef} className="h-full w-full" />
-			<div className="absolute bottom-4 right-4 bg-white p-2 rounded-md shadow-md flex flex-col gap-2 z-50">
+			<div
+				className="absolute bottom-4 right-4 bg-white p-2 rounded-md shadow-md flex flex-col gap-2 z-50"
+				style={{ zIndex: 1000 }}
+			>
 				<div className="flex gap-2">
 					<select
-						value={locationType}
-						onChange={(e) => setLocationType(e.target.value)}
+						value={wikiType}
+						onChange={(e) => setWikiType(e.target.value)}
 						className="p-2 w-40"
 					>
-						{LOCATION_TYPES.map((type) => (
+						{WIKI_TYPES.map((type: any) => (
 							<option key={type.value} value={type.value}>
 								{type.label}
 							</option>

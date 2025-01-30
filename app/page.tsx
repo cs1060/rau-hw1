@@ -33,7 +33,8 @@ export default function Home() {
 		<div className="h-screen w-screen">
 			<form
 				onSubmit={handleSearch}
-				className="fixed top-4 left-16 flex flex-row gap-2 z-40"
+				className="fixed top-4 left-16 flex flex-row gap-2"
+				style={{ zIndex: 1000 }}
 			>
 				<input
 					type="text"
