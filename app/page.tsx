@@ -3,6 +3,7 @@
 import axios from "axios"
 import dynamic from "next/dynamic"
 import { useState } from "react"
+import InfoButton from "./components/InfoButton"
 
 const MapComponent = dynamic(() => import("@/app/components/Map"), {
 	ssr: false,
@@ -31,6 +32,7 @@ export default function Home() {
 
 	return (
 		<div className="h-screen w-screen">
+			<InfoButton />
 			<form
 				onSubmit={handleSearch}
 				className="fixed top-4 left-16 flex flex-row gap-2"
